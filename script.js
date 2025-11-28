@@ -2,9 +2,50 @@ const addBtn = document.getElementById('addCountdownBtn');
 const listEl = document.getElementById('countdownList');
 const targetInput = document.getElementById('targetInput');
 const alarmSound = document.getElementById('alarmSound');
+const celebrationSound1 = document.getElementById('celebrationSound1');
+const celebrationSound2 = document.getElementById('celebrationSound2');
+const partySound = document.getElementById('partySound');
+const clickSound = document.getElementById('clickSound');
+const tickSound = document.getElementById('tickSound');
+const successSound = document.getElementById('successSound');
+const deleteSound = document.getElementById('deleteSound');
+const pauseSound = document.getElementById('pauseSound');
+const resumeSound = document.getElementById('resumeSound');
 const themeToggle = document.getElementById('themeToggle');
+const soundToggle = document.getElementById('soundToggle');
+const confettiContainer = document.getElementById('confetti-container');
 
 let countdowns = [];
+let soundEnabled = localStorage.getItem('soundEnabled') !== 'false'; // Default to enabled
+
+// Update sound toggle button icon
+if (soundToggle) {
+    soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+}
+
+// Sound toggle functionality
+if (soundToggle) {
+    soundToggle.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        localStorage.setItem('soundEnabled', soundEnabled);
+        soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+        // Don't play sound when toggling (to avoid feedback loop)
+    });
+}
+
+// Helper function to play sounds
+function playSound(soundElement, volume = 0.3) {
+    if (!soundEnabled || !soundElement) return;
+    try {
+        soundElement.volume = volume;
+        soundElement.currentTime = 0;
+        soundElement.play().catch(e => {
+            // Silently fail if sound can't play (user interaction required, etc.)
+        });
+    } catch (e) {
+        // Silently fail
+    }
+}
 
 // Theme toggle
 if (localStorage.getItem('theme') === 'light') {
@@ -15,6 +56,7 @@ if (localStorage.getItem('theme') === 'light') {
 }
 
 themeToggle.addEventListener('click', () => {
+    playSound(clickSound, 0.2);
     document.body.classList.toggle('light');
     const isLight = document.body.classList.contains('light');
     localStorage.setItem('theme', isLight ? 'light' : 'dark');
@@ -22,10 +64,17 @@ themeToggle.addEventListener('click', () => {
 });
 
 addBtn.addEventListener('click', () => {
-    if (!targetInput.value) return alert("Pick a valid time");
+    playSound(clickSound, 0.3);
+    if (!targetInput.value) {
+        playSound(deleteSound, 0.2);
+        return alert("Pick a valid time");
+    }
 
     let t = new Date(targetInput.value).getTime();
-    if (t <= Date.now()) return alert("Choose a future time");
+    if (t <= Date.now()) {
+        playSound(deleteSound, 0.2);
+        return alert("Choose a future time");
+    }
 
     let name = prompt("Enter a name for this countdown (optional):") || `Countdown ${countdowns.length + 1}`;
     let id = Date.now() + Math.random();
@@ -36,9 +85,11 @@ addBtn.addEventListener('click', () => {
         target: t,
         started: true,
         total: t - Date.now(),
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        celebrated: false
     });
 
+    playSound(successSound, 0.4);
     render();
 });
 
@@ -97,17 +148,25 @@ function render() {
 }
 
 function toggleStart(id) {
+    playSound(clickSound, 0.3);
     let c = countdowns.find(x => x.id === id);
     if (!c) return;
     if (c.target <= Date.now()) {
+        playSound(deleteSound, 0.2);
         alert("Cannot start a finished countdown. Please reset it first.");
         return;
     }
     c.started = !c.started;
+    if (c.started) {
+        playSound(resumeSound, 0.3);
+    } else {
+        playSound(pauseSound, 0.3);
+    }
     render();
 }
 
 function resetCountdown(id) {
+    playSound(clickSound, 0.3);
     let c = countdowns.find(x => x.id === id);
     if (!c) return;
     if (!confirm(`Reset "${c.name}" countdown?`)) return;
@@ -117,6 +176,7 @@ function resetCountdown(id) {
 
     let t = new Date(newTarget).getTime();
     if (t <= Date.now()) {
+        playSound(deleteSound, 0.2);
         alert("Choose a future time");
         return;
     }
@@ -125,10 +185,13 @@ function resetCountdown(id) {
     c.total = t - Date.now();
     c.started = true;
     c.createdAt = Date.now();
+    c.celebrated = false; // Reset celebration flag
+    playSound(successSound, 0.3);
     render();
 }
 
 function editCountdown(id) {
+    playSound(clickSound, 0.3);
     let c = countdowns.find(x => x.id === id);
     if (!c) return;
 
@@ -141,16 +204,20 @@ function editCountdown(id) {
 
     let t = new Date(newTarget).getTime();
     if (t <= Date.now()) {
+        playSound(deleteSound, 0.2);
         alert("Choose a future time");
         return;
     }
 
     c.target = t;
     c.total = t - Date.now();
+    playSound(successSound, 0.3);
     render();
 }
 
 function removeCountdown(id) {
+    playSound(clickSound, 0.3);
+    playSound(deleteSound, 0.4);
     countdowns = countdowns.filter(x => x.id !== id);
     render();
 }
@@ -186,7 +253,7 @@ function updateAll() {
 
         if (remaining <= 0) {
             tEl.textContent = "00:00:00:00";
-            mEl.textContent = "Finished!";
+            mEl.textContent = "🎉 Finished! 🎉";
             pEl.style.width = '100%';
             if (statusEl) {
                 statusEl.textContent = '✓ Finished';
@@ -194,10 +261,30 @@ function updateAll() {
             }
             if (percentEl) percentEl.textContent = '100%';
             if (progressWrapper) progressWrapper.setAttribute('data-percent', '100%');
-            if (alarmSound && c.started) {
-                alarmSound.play().catch(e => console.log('Could not play alarm:', e));
-                c.started = false; // Stop playing alarm repeatedly
+
+            // Trigger celebration only once when countdown first finishes
+            if (c.started && !c.celebrated) {
+                c.celebrated = true;
+                c.started = false;
+
+                // Get the countdown item element for confetti positioning
+                const countdownItem = document.getElementById(`cd-${c.id}`);
+                if (countdownItem) {
+                    // Add celebration pulse animation
+                    countdownItem.classList.add('finished-celebrating');
+                    setTimeout(() => {
+                        countdownItem.classList.remove('finished-celebrating');
+                    }, 1500);
+
+                    celebrate(countdownItem);
+                }
+
+                // Also play alarm sound
+                if (alarmSound) {
+                    alarmSound.play().catch(e => console.log('Could not play alarm:', e));
+                }
             }
+
             if (elapsedEl) elapsedEl.textContent = `${elapsedD}d ${elapsedH}h ${elapsedM}m`;
             if (totalEl) totalEl.textContent = `${totalD}d ${totalH}h ${totalM}m`;
             return;
@@ -221,6 +308,15 @@ function updateAll() {
         const m = Math.floor((secs % 3600) / 60);
         const s = secs % 60;
 
+        // Play tick sound when seconds change (only for active countdowns)
+        if (c.started && (!c.lastSecond || c.lastSecond !== s)) {
+            // Only play tick for countdowns with less than 1 hour remaining (to avoid too many sounds)
+            if (remaining < 3600000) {
+                playSound(tickSound, 0.15);
+            }
+            c.lastSecond = s;
+        }
+
         tEl.textContent = `${pad(d)}:${pad(h)}:${pad(m)}:${pad(s)}`;
         mEl.textContent = `Target: ${new Date(c.target).toLocaleString()}`;
 
@@ -236,6 +332,75 @@ function updateAll() {
 
 function pad(n) {
     return String(n).padStart(2, '0');
+}
+
+// Confetti/Party Popper Effect
+function createConfetti(element) {
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe', '#fd79a8', '#fdcb6e'];
+    const confettiCount = 150;
+    const duration = 3000;
+
+    const rect = element.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = centerX + 'px';
+        confetti.style.top = centerY + 'px';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.setProperty('--random-x', (Math.random() - 0.5) * 800 + 'px');
+        confetti.style.setProperty('--random-y', (Math.random() - 0.5) * 800 + 'px');
+        confetti.style.setProperty('--random-rotation', Math.random() * 720 + 'deg');
+        confetti.style.setProperty('--delay', Math.random() * 0.5 + 's');
+
+        confettiContainer.appendChild(confetti);
+
+        setTimeout(() => {
+            confetti.remove();
+        }, duration);
+    }
+
+    // Add sparkle effect
+    for (let i = 0; i < 20; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'sparkle';
+        sparkle.style.left = centerX + (Math.random() - 0.5) * 200 + 'px';
+        sparkle.style.top = centerY + (Math.random() - 0.5) * 200 + 'px';
+        sparkle.style.setProperty('--delay', Math.random() * 0.3 + 's');
+        confettiContainer.appendChild(sparkle);
+
+        setTimeout(() => {
+            sparkle.remove();
+        }, 2000);
+    }
+}
+
+// Celebration function - plays sounds and creates confetti
+function celebrate(element) {
+    // Play celebration sounds
+    if (celebrationSound1) {
+        celebrationSound1.currentTime = 0;
+        celebrationSound1.play().catch(e => console.log('Could not play celebration sound:', e));
+    }
+
+    setTimeout(() => {
+        if (celebrationSound2) {
+            celebrationSound2.currentTime = 0;
+            celebrationSound2.play().catch(e => console.log('Could not play celebration sound:', e));
+        }
+    }, 300);
+
+    setTimeout(() => {
+        if (partySound) {
+            partySound.currentTime = 0;
+            partySound.play().catch(e => console.log('Could not play party sound:', e));
+        }
+    }, 600);
+
+    // Create confetti effect
+    createConfetti(element);
 }
 
 // Update countdowns every second
