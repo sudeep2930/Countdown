@@ -286,7 +286,35 @@ button {
     background: var(--card);
     border: 1px solid rgba(255, 255, 255, 0.1);
     cursor: pointer;
-    color: var(--text)
+    color: var(--text);
+    z-index: 1000;
+    font-size: 18px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.sound-btn {
+    position: fixed;
+    top: 20px;
+    right: 70px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--card);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    color: var(--text);
+    z-index: 1000;
+    font-size: 18px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sound-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 
@@ -388,6 +416,13 @@ button {
         font-size: 18px;
     }
 
+    .sound-btn {
+        top: 10px;
+        right: 60px;
+        padding: 8px 12px;
+        font-size: 18px;
+    }
+
     .wrap {
         max-width: 100%;
     }
@@ -413,5 +448,117 @@ button {
     .countdown-item {
         padding: 20px;
         min-height: 220px;
+    }
+}
+
+/* Confetti and Celebration Effects */
+#confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #ff6b6b;
+    border-radius: 50%;
+    animation: confetti-fall 3s ease-out forwards;
+    box-shadow: 0 0 6px currentColor;
+}
+
+.confetti:nth-child(odd) {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+}
+
+.confetti:nth-child(3n) {
+    width: 12px;
+    height: 12px;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    border-radius: 0;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(var(--random-x), var(--random-y)) rotate(var(--random-rotation)) scale(0);
+        opacity: 0;
+    }
+}
+
+.sparkle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: 50%;
+    animation: sparkle-pop 2s ease-out forwards;
+    box-shadow: 0 0 10px white, 0 0 20px white;
+}
+
+.sparkle::before,
+.sparkle::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 10px white;
+}
+
+.sparkle::before {
+    transform: translateX(-20px);
+}
+
+.sparkle::after {
+    transform: translateX(20px);
+}
+
+@keyframes sparkle-pop {
+    0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.5) rotate(180deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Celebration animation for finished countdown */
+.countdown-item.finished-celebrating {
+    animation: celebration-pulse 0.5s ease-in-out 3;
+}
+
+@keyframes celebration-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 20px 60px rgba(124, 58, 237, 0.6);
     }
 }
