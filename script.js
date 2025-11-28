@@ -1,15 +1,29 @@
-// Initialize DOM elements
 const addBtn = document.getElementById('addCountdownBtn');
-const targetInput = document.getElementById('targetInput');
 const listEl = document.getElementById('countdownList');
+const targetInput = document.getElementById('targetInput');
 const alarmSound = document.getElementById('alarmSound');
 const themeToggle = document.getElementById('themeToggle');
 
-// Initialize countdowns array
 let countdowns = [];
 
-// Add countdown event listener
+// Theme toggle
+if (localStorage.getItem('theme') === 'light') {
+    document.body.classList.add('light');
+    themeToggle.textContent = '☀️';
+} else {
+    themeToggle.textContent = '🌙';
+}
+
+themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('light');
+    const isLight = document.body.classList.contains('light');
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    themeToggle.textContent = isLight ? '☀️' : '🌙';
+});
+
 addBtn.addEventListener('click', () => {
+    if (!targetInput.value) return alert("Pick a valid time");
+
     let t = new Date(targetInput.value).getTime();
     if (t <= Date.now()) return alert("Choose a future time");
 
@@ -18,7 +32,7 @@ addBtn.addEventListener('click', () => {
 
     countdowns.push({
         id,
-        name: name,
+        name: name.trim() || `Countdown ${countdowns.length + 1}`,
         target: t,
         started: true,
         total: t - Date.now(),
@@ -26,12 +40,6 @@ addBtn.addEventListener('click', () => {
     });
 
     render();
-});
-
-// Theme toggle functionality
-themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('light');
-    themeToggle.textContent = document.body.classList.contains('light') ? '☀️' : '🌙';
 });
 
 function render() {
@@ -50,7 +58,7 @@ function render() {
         item.innerHTML = `
 <div class="countdown-header">
     <div class="countdown-title" id="title-${c.id}">${c.name || 'Countdown'}</div>
-    <div class="countdown-status status-${status}" id="status-${c.id}">${status === 'running' ? 'Running' : status === 'paused' ? 'Paused' : 'Finished'}</div>
+    <div class="countdown-status status-${status}" id="status-${c.id}">${status === 'running' ? '▶ Running' : status === 'paused' ? '⏸ Paused' : '✓ Finished'}</div>
 </div>
 
 <div class="time-display" id="time-${c.id}">--:--:--:--</div>
@@ -181,7 +189,7 @@ function updateAll() {
             mEl.textContent = "Finished!";
             pEl.style.width = '100%';
             if (statusEl) {
-                statusEl.textContent = 'Finished';
+                statusEl.textContent = '✓ Finished';
                 statusEl.className = 'countdown-status status-finished';
             }
             if (percentEl) percentEl.textContent = '100%';
@@ -197,12 +205,12 @@ function updateAll() {
 
         if (!c.started) {
             if (statusEl) {
-                statusEl.textContent = 'Paused';
+                statusEl.textContent = '⏸ Paused';
                 statusEl.className = 'countdown-status status-paused';
             }
         } else {
             if (statusEl) {
-                statusEl.textContent = 'Running';
+                statusEl.textContent = '▶ Running';
                 statusEl.className = 'countdown-status status-running';
             }
         }
